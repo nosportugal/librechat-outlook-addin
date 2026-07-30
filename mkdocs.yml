@@ -1,0 +1,8 @@
+site_name: librechat-outlook-addin
+site_description: Outlook Add-in that integrates LibreChat AI for email summarization and reply generation
+
+plugins:
+  - techdocs-core
+
+nav:
+  - Home: index.md

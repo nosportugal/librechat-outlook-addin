@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Assistant</title>
+    <script src="/env-config.js"></script>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <h1>
+          <img
+            id="header-logo"
+            src="/assets/icon-32.png"
+            alt="AI Assistant"
+            class="header-logo"
+          /><span id="brand-name">AI Assistant</span>
+        </h1>
+        <button
+          id="settings-btn"
+          class="btn btn-icon header-action"
+          title="Settings"
+        >
+          ⚙️
+        </button>
+        <button
+          id="back-btn"
+          class="btn btn-icon header-action hidden"
+          title="Back"
+        >
+          ⬅️
+        </button>
+      </header>
+
+      <!-- MAIN VIEW (default) -->
+      <div id="main-view">
+        <section id="main-section">
+          <div id="email-preview" class="hidden"></div>
+
+          <div id="tone-section" class="hidden">
+            <p class="card-description" data-i18n="tone.pickHint">
+              Choose a tone for the selected text:
+            </p>
+            <div id="tone-presets" class="tone-presets">
+              <button class="tone-chip" data-tone="formal">
+                <span class="tone-chip-icon" aria-hidden="true">👔</span>
+                <span data-i18n="tone.formal">Formal</span>
+              </button>
+              <button class="tone-chip" data-tone="friendly">
+                <span class="tone-chip-icon" aria-hidden="true">😊</span>
+                <span data-i18n="tone.friendly">Friendly</span>
+              </button>
+              <button class="tone-chip" data-tone="concise">
+                <span class="tone-chip-icon" aria-hidden="true">✂️</span>
+                <span data-i18n="tone.concise">Concise</span>
+              </button>
+              <button class="tone-chip" data-tone="assertive">
+                <span class="tone-chip-icon" aria-hidden="true">🎯</span>
+                <span data-i18n="tone.assertive">Assertive</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="custom-instructions-section" class="hidden">
+            <label for="custom-prompt" data-i18n="taskpane.promptLabel"
+              >Prompt Instructions</label
+            >
+            <textarea
+              id="custom-prompt"
+              rows="8"
+              class="custom-prompt-textarea"
+            ></textarea>
+            <button id="custom-reply-btn" class="btn btn-reply">
+              <span
+                id="custom-reply-btn-text"
+                data-i18n="taskpane.generateReply"
+                >Generate Reply</span
+              >
+              <span id="custom-reply-btn-spinner" class="spinner hidden"></span>
+            </button>
+          </div>
+
+          <div id="loading-box" class="card hidden">
+            <div class="card-header">
+              <div class="card-header-left">
+                <span class="card-icon">⏳</span>
+                <h2 data-i18n="taskpane.loading">Generating response…</h2>
+              </div>
+            </div>
+            <div class="card-body loading-body">
+              <div class="shimmer-line shimmer-long"></div>
+              <div class="shimmer-line shimmer-medium"></div>
+              <div class="shimmer-line shimmer-short"></div>
+              <div class="shimmer-line shimmer-long"></div>
+              <div class="shimmer-line shimmer-medium"></div>
+            </div>
+          </div>
+
+          <div id="response-box" class="card hidden">
+            <div class="card-header">
+              <div class="card-header-left">
+                <span class="card-icon">💬</span>
+                <h2 data-i18n="taskpane.response">Response</h2>
+              </div>
+              <button
+                id="copy-btn"
+                class="btn btn-icon"
+                data-i18n-title="taskpane.copyTooltip"
+                title="Copy to clipboard"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M4 4V1.5C4 1.224 4.224 1 4.5 1H13.5C13.776 1 14 1.224 14 1.5V10.5C14 10.776 13.776 11 13.5 11H11"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    fill="none"
+                  />
+                  <rect
+                    x="2"
+                    y="5"
+                    width="9"
+                    height="10"
+                    rx="0.5"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    fill="none"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div id="response-content" class="card-body"></div>
+          </div>
+
+          <div id="tone-actions" class="tone-actions hidden">
+            <button id="tone-apply-btn" class="btn btn-reply">
+              <span id="tone-apply-btn-text" data-i18n="tone.apply"
+                >Apply to email</span
+              >
+              <span id="tone-apply-btn-spinner" class="spinner hidden"></span>
+            </button>
+            <div
+              id="tone-applied-status"
+              class="tone-applied-status hidden"
+            ></div>
+          </div>
+
+          <div id="error-box" class="hidden">
+            <p id="error-message"></p>
+          </div>
+        </section>
+      </div>
+
+      <!-- SETTINGS VIEW (hidden by default) -->
+      <div id="settings-view" class="hidden">
+        <section id="config-section">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-left">
+                <span class="card-icon">🔑</span>
+                <h3 data-i18n="settings.apiKeyLabel">API Key</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <p id="api-key-description" class="card-description">
+                Your personal key to authenticate with the service.
+              </p>
+              <input
+                type="password"
+                id="api-key"
+                data-i18n-placeholder="settings.apiKeyPlaceholder"
+                placeholder="Your API key"
+                class="settings-input"
+              />
+              <button
+                id="test-connection-btn"
+                class="btn btn-test-connection"
+                data-i18n="settings.testConnection"
+              >
+                Save &amp; Test Connection
+              </button>
+              <div id="connection-status" class="hidden"></div>
+            </div>
+          </div>
+
+          <details id="advanced-section" class="advanced hidden">
+            <summary class="advanced-summary">
+              <span class="advanced-chevron" aria-hidden="true">▸</span>
+              <span data-i18n="settings.advanced">Advanced</span>
+            </summary>
+            <div id="agent-section" class="hidden">
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-header-left">
+                    <span class="card-icon">🤖</span>
+                    <h3 data-i18n="settings.agentLabel">Agent</h3>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <p
+                    class="card-description"
+                    data-i18n="settings.agentDescription"
+                  >
+                    Choose which agent to use for generating responses.
+                  </p>
+                  <select id="agent-select" class="settings-input" disabled>
+                    <option value="" data-i18n="settings.agentPlaceholder">
+                      -- Select an agent --
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="agent-status" class="hidden"></div>
+            </div>
+          </details>
+        </section>
+      </div>
+
+      <footer class="app-footer">
+        <span class="version-text" data-i18n="taskpane.disclaimer"
+          >As respostas geradas por este chat podem conter imprecisões,
+          verifica-as antes de as utilizares.</span
+        >
+      </footer>
+    </div>
+  </body>
+</html>

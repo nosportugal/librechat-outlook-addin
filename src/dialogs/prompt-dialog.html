@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prompt Instructions</title>
+    <script src="/env-config.js"></script>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  </head>
+  <body>
+    <div id="dialog-app">
+      <h2 data-i18n="dialog.title">Prompt Instructions</h2>
+      <p class="description" data-i18n="dialog.description">
+        Edit the prompt below, then click Generate Reply.
+      </p>
+      <textarea id="prompt-input" rows="10"></textarea>
+      <div class="button-row">
+        <button
+          id="cancel-btn"
+          class="btn btn-cancel"
+          data-i18n="dialog.cancel"
+        >
+          Cancel
+        </button>
+        <button
+          id="submit-btn"
+          class="btn btn-submit"
+          data-i18n="dialog.submit"
+        >
+          Generate Reply
+        </button>
+      </div>
+    </div>
+  </body>
+</html>
