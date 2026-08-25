@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Outlook Add-in (NOS-GPT) that sends emails to a LibreChat API for AI summarization and reply drafting, built with vanilla JS + Webpack + Office.js.
+Outlook Add-in that sends emails to a LibreChat API for AI summarization and reply drafting, built with vanilla JS + Webpack + Office.js.
 
 ## Landmines & Boundaries
 
