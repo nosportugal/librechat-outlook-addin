@@ -477,7 +477,7 @@ function getComposeEmailData() {
       }
 
       const getData = {};
-      const promises = ;
+      const promises = [];
 
       promises.push(
         new Promise((res) => {
