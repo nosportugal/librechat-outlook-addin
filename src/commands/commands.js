@@ -19,17 +19,9 @@ const REPLY_MARKER_END = "<!--ai-reply-end-->";
 // we can reliably delimit the AI block even in plain-text body reads.
 const REPLY_TEXT_MARKER_START = "\u200B\u200C\u200B";
 const REPLY_TEXT_MARKER_END = "\u200B\u200D\u200B";
-// Back-compat alias (legacy code referenced REPLY_TEXT_MARKER as "start").
-const REPLY_TEXT_MARKER = REPLY_TEXT_MARKER_START;
 
 function wrapReplyHtml(htmlContent) {
   return `${REPLY_MARKER_START}<div class="ai-reply" data-ai-reply="1" style="font-family:inherit;font-size:inherit;color:inherit;">${REPLY_TEXT_MARKER_START}${htmlContent}${REPLY_TEXT_MARKER_END}</div>${REPLY_MARKER_END}`;
-}
-
-function escapeHtml(text) {
-  const div = document.createElement("div");
-  div.appendChild(document.createTextNode(text));
-  return div.innerHTML;
 }
 
 // Renders the agent's markdown reply into sanitized HTML for Outlook.
@@ -648,7 +640,7 @@ function composeReplyCustom(event) {
   let settings;
   try {
     settings = getSettings();
-  } catch (err) {
+  } catch {
     showNotificationError("settingsError", t("notify.settingsError"));
     event.completed();
     return;
@@ -841,7 +833,7 @@ function readReplyCustom(event) {
   let settings;
   try {
     settings = getSettings();
-  } catch (err) {
+  } catch {
     showNotificationError("settingsError", t("notify.settingsError"));
     event.completed();
     return;
