@@ -203,7 +203,7 @@ sequenceDiagram
 
 | Concern             | How it's handled                                                                                                |
 | ------------------- | --------------------------------------------------------------------------------------------------------------- |
-| **API key storage** | Stored in Outlook roaming settings — never leaves your machine except for API calls to your configured endpoint |
+| **API key storage** | Stored in Outlook roaming settings (synced via your mailbox) — only sent in API calls to your configured endpoint |
 | **HTML rendering**  | All API responses are sanitized with [DOMPurify](https://github.com/cure53/DOMPurify) before being rendered     |
 | **Permissions**     | The add-in only requests `ReadWriteItem` — scoped to the current email                                          |
 | **Network**         | All traffic goes directly to **your** LibreChat instance — no third-party services involved                     |
