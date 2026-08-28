@@ -1068,7 +1068,7 @@ Office.onReady((info) => {
         .getElementById("custom-instructions-section")
         .classList.remove("hidden");
       document.getElementById("custom-prompt").value =
-        ACTION_PROMPTS["compose-reply"];
+        ACTION_DIRECTIVES["reply"];
 
       document
         .getElementById("custom-reply-btn")

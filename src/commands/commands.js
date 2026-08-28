@@ -19,17 +19,9 @@ const REPLY_MARKER_END = "<!--ai-reply-end-->";
 // we can reliably delimit the AI block even in plain-text body reads.
 const REPLY_TEXT_MARKER_START = "\u200B\u200C\u200B";
 const REPLY_TEXT_MARKER_END = "\u200B\u200D\u200B";
-// Back-compat alias (legacy code referenced REPLY_TEXT_MARKER as "start").
-const REPLY_TEXT_MARKER = REPLY_TEXT_MARKER_START;
 
 function wrapReplyHtml(htmlContent) {
   return `${REPLY_MARKER_START}<div class="ai-reply" data-ai-reply="1" style="font-family:inherit;font-size:inherit;color:inherit;">${REPLY_TEXT_MARKER_START}${htmlContent}${REPLY_TEXT_MARKER_END}</div>${REPLY_MARKER_END}`;
-}
-
-function escapeHtml(text) {
-  const div = document.createElement("div");
-  div.appendChild(document.createTextNode(text));
-  return div.innerHTML;
 }
 
 // Renders the agent's markdown reply into sanitized HTML for Outlook.
@@ -173,19 +165,19 @@ function stripPreviousReplyText(text) {
  * the button. This is an intentional UX choice to avoid the scroll-jump.
  */
 function insertReplyIntoBody(item, wrappedReply, onError, onDone) {
-  console.log("[NOS-GPT] insertReplyIntoBody called (setSelectedDataAsync)");
+  console.log(" insertReplyIntoBody called (setSelectedDataAsync)");
 
   if (typeof item.body.setSelectedDataAsync !== "function") {
     // Very old host — fall back to prependAsync (no scroll jump but appends).
     console.warn(
-      "[NOS-GPT] setSelectedDataAsync unavailable, falling back to prependAsync",
+      " setSelectedDataAsync unavailable, falling back to prependAsync",
     );
     item.body.prependAsync(
       wrappedReply,
       {coercionType: Office.CoercionType.Html},
       (result) => {
         if (result.status === Office.AsyncResultStatus.Failed) {
-          console.error("[NOS-GPT] prependAsync failed:", result.error);
+          console.error(" prependAsync failed:", result.error);
           onError(result.error?.message || "Failed to insert reply");
         }
         onDone();
@@ -199,10 +191,10 @@ function insertReplyIntoBody(item, wrappedReply, onError, onDone) {
     {coercionType: Office.CoercionType.Html},
     (result) => {
       if (result.status === Office.AsyncResultStatus.Failed) {
-        console.error("[NOS-GPT] setSelectedDataAsync failed:", result.error);
+        console.error(" setSelectedDataAsync failed:", result.error);
         onError(result.error?.message || "Failed to insert reply");
       } else {
-        console.log("[NOS-GPT] setSelectedDataAsync succeeded");
+        console.log(" setSelectedDataAsync succeeded");
       }
       onDone();
     },
@@ -552,7 +544,7 @@ function getComposeEmailData() {
               );
               if (hadPrevious) {
                 console.log(
-                  "[NOS-GPT] previous AI reply stripped from compose body before LLM call",
+                  " previous AI reply stripped from compose body before LLM call",
                 );
               }
               // Convert the cleaned HTML to plain text for the prompt.
@@ -648,7 +640,7 @@ function composeReplyCustom(event) {
   let settings;
   try {
     settings = getSettings();
-  } catch (err) {
+  } catch {
     showNotificationError("settingsError", t("notify.settingsError"));
     event.completed();
     return;
@@ -778,7 +770,7 @@ function composeReplyCustom(event) {
 }
 
 async function composeReplyDefault(event) {
-  console.log("[NOS-GPT] composeReplyDefault called");
+  console.log(" composeReplyDefault called");
   try {
     const settings = getSettings();
 
@@ -791,10 +783,10 @@ async function composeReplyDefault(event) {
     showProgressNotification("progress", t("notify.generating"));
 
     const email = await getComposeEmailData();
-    console.log("[NOS-GPT] email data retrieved, subject:", email.subject);
+    console.log(" email data retrieved, subject:", email.subject);
     const emailText = formatEmailForPrompt(email);
     const response = await callLibreChatWithPrompt(settings, emailText, "");
-    console.log("[NOS-GPT] API response received, length:", response.length);
+    console.log(" API response received, length:", response.length);
 
     removeNotification("progress");
 
@@ -818,16 +810,16 @@ async function composeReplyDefault(event) {
       item,
       wrappedReply,
       (errMsg) => {
-        console.error("[NOS-GPT] insertReplyIntoBody error:", errMsg);
+        console.error(" insertReplyIntoBody error:", errMsg);
         showNotificationError("error", t("error.insertReply") + errMsg);
       },
       () => {
-        console.log("[NOS-GPT] composeReplyDefault completed");
+        console.log(" composeReplyDefault completed");
         event.completed();
       },
     );
   } catch (err) {
-    console.error("[NOS-GPT] composeReplyDefault exception:", err);
+    console.error(" composeReplyDefault exception:", err);
     removeNotification("progress");
     showNotificationError(
       "error",
@@ -841,7 +833,7 @@ function readReplyCustom(event) {
   let settings;
   try {
     settings = getSettings();
-  } catch (err) {
+  } catch {
     showNotificationError("settingsError", t("notify.settingsError"));
     event.completed();
     return;
