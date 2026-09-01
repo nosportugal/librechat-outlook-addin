@@ -17,6 +17,15 @@ module.exports = [
     },
   },
   {
+    // Unit tests run under Vitest (ES modules, jsdom + node globals).
+    files: ["tests/**/*.js"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: {...globals.browser, ...globals.node},
+    },
+  },
+  {
     // Node-side tooling: webpack config, dev server, build scripts.
     files: ["eslint.config.js", "webpack.config.js", "server.js", "scripts/**/*.js"],
     languageOptions: {

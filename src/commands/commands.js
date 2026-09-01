@@ -1,5 +1,6 @@
 /* global Office */
 import {initI18n, t, getLocale} from "../i18n.js";
+import {getAccessToken} from "../auth.js";
 import DOMPurify from "dompurify";
 import {marked} from "marked";
 
@@ -201,8 +202,30 @@ function insertReplyIntoBody(item, wrappedReply, onError, onDone) {
   );
 }
 
-function getRoamingApiKey() {
-  return Office.context.roamingSettings.get("apiKey") || "";
+// Ribbon commands run with no UI surface to host a login prompt, so they are
+// silent-only: they ride on the MSAL localStorage cache the task pane
+// populated (taskpane.html and commands.html share an origin). When the cache
+// is cold we surface a notification and stop — never acquireTokenPopup here.
+
+// Acquires a token silently and returns the Authorization header value.
+// Throws (InteractionRequiredAuthError et al.) when the cache is cold; the
+// caller turns that into a notification and aborts the command.
+async function getAuthHeader() {
+  const token = await getAccessToken({allowInteractive: false});
+  return `Bearer ${token}`;
+}
+
+// Silent-token guard for every command entry point. Returns the token when the
+// cache is warm; when it is cold, shows the "open the task pane to sign in"
+// notification, completes the event, and returns null so the caller stops.
+async function requireSilentToken(event) {
+  try {
+    return await getAccessToken({allowInteractive: false});
+  } catch {
+    showNotificationError("signInRequired", t("notify.signInRequired"));
+    event.completed();
+    return null;
+  }
 }
 
 function detectTheme() {
@@ -234,7 +257,6 @@ function getSettings() {
   const storedAgentId = Office.context.roamingSettings.get("agentId") || "";
   return {
     apiUrl: ENV_API_URL,
-    apiKey: getRoamingApiKey(),
     model: storedAgentId || ENV_AGENT_ID,
   };
 }
@@ -418,11 +440,8 @@ async function replyWithAI(event) {
   try {
     const settings = getSettings();
 
-    if (!settings.apiKey) {
-      showNotificationError("noSettings", t("notify.noApiKey"));
-      event.completed();
-      return;
-    }
+    const token = await requireSilentToken(event);
+    if (!token) return;
 
     showProgressNotification("progress", t("notify.generating"));
 
@@ -604,10 +623,10 @@ async function callLibreChatWithPrompt(
   const content = `${directive}${extra}\n\nHere is the email:\n\n${emailText}`;
   const messages = [{role: "user", content}];
 
-  const headers = {"Content-Type": "application/json"};
-  if (settings.apiKey) {
-    headers["Authorization"] = `Bearer ${settings.apiKey}`;
-  }
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: await getAuthHeader(),
+  };
 
   const payload = {model: settings.model, messages, stream: false};
   const response = await fetch(url, {
@@ -636,7 +655,7 @@ async function callLibreChatWithPrompt(
   throw new Error("No response content from API.");
 }
 
-function composeReplyCustom(event) {
+async function composeReplyCustom(event) {
   let settings;
   try {
     settings = getSettings();
@@ -646,11 +665,8 @@ function composeReplyCustom(event) {
     return;
   }
 
-  if (!settings.apiKey) {
-    showNotificationError("noSettings", t("notify.noApiKey"));
-    event.completed();
-    return;
-  }
+  const token = await requireSilentToken(event);
+  if (!token) return;
 
   const dialogUrl = buildDialogUrl();
 
@@ -774,11 +790,8 @@ async function composeReplyDefault(event) {
   try {
     const settings = getSettings();
 
-    if (!settings.apiKey) {
-      showNotificationError("noSettings", t("notify.noApiKey"));
-      event.completed();
-      return;
-    }
+    const token = await requireSilentToken(event);
+    if (!token) return;
 
     showProgressNotification("progress", t("notify.generating"));
 
@@ -829,7 +842,7 @@ async function composeReplyDefault(event) {
   }
 }
 
-function readReplyCustom(event) {
+async function readReplyCustom(event) {
   let settings;
   try {
     settings = getSettings();
@@ -839,11 +852,8 @@ function readReplyCustom(event) {
     return;
   }
 
-  if (!settings.apiKey) {
-    showNotificationError("noSettings", t("notify.noApiKey"));
-    event.completed();
-    return;
-  }
+  const token = await requireSilentToken(event);
+  if (!token) return;
 
   const dialogUrl = buildDialogUrl();
 
