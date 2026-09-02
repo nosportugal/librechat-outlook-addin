@@ -41,6 +41,10 @@ powered by your own [LibreChat](https://www.librechat.ai/) instance.
 - **[Node.js](https://nodejs.org/)** v24 or later
 - An **Outlook** client (Desktop, Web, or Mac) with add-in support
 - A running **[LibreChat](https://www.librechat.ai/)** instance with an OpenAI-compatible API endpoint
+- An Outlook client that supports **Nested App Authentication (NAA) 1.1** — Outlook on the web, Outlook for Windows version 2409 (build 18025.20000) or later, Outlook for Mac version 16.89 (build 24090815) or later, or the supported mobile clients
+
+> [!IMPORTANT]
+> NAA is not supported for Outlook.com or Gmail mailboxes. Older or unsupported Outlook clients cannot use this add-in because it has no API-key fallback.
 
 ---
 
@@ -101,32 +105,98 @@ The development server starts on **`https://localhost:3000`** with HTTPS.
 2. Click **+** → Choose `manifest.xml`
 </details>
 
-### 6 · Configure API access
+### 6 · Sign in automatically
 
 1. Open any email in Outlook
 2. Click the add-in button in the ribbon
-3. Expand **Settings** and enter your API Key
+3. The add-in signs you in through your organization's Microsoft Entra ID configuration
 
-4. Click **Save Settings** — you're ready to go!
+Once Entra and LibreChat are configured, no API key is required and there is nothing to paste into Settings.
 
 ---
 
 ## 🔧 Environment Variables
 
-Copy `.env.example` to `.env` and fill in the values. All variables are optional except `LIBRECHAT_API_URL`.
+Copy `.env.example` to `.env` and fill in the values. All variables are optional during development, but the LibreChat URL and Entra settings are required for a working deployment.
 
-| Variable                 | Description                                                                 | Default               |
-| ------------------------ | --------------------------------------------------------------------------- | --------------------- |
-| `LIBRECHAT_API_URL`      | Base URL of your LibreChat instance (no trailing slash)                     | _(none)_              |
-| `LIBRECHAT_AGENT_ID`     | Default Agent / Assistant ID to pre-select                                  | _(none)_              |
-| `LIBRECHAT_API_KEY_HELP` | Markdown string shown under the API Key field in Settings (supports links)  | _(auto-generated)_    |
-| `APP_NAME`               | Product name shown in the task pane header, title, and notification strings | `AI Assistant`        |
-| `APP_LOGO_URL`           | Absolute URL to your logo for the task pane header                          | bundled `icon-32.png` |
-| `ICON_LABEL`             | Badge drawn on the main ribbon icon at runtime (`DEV`, `STB`, or empty)     | _(none — production)_ |
+| Variable             | Description                                                                                   | Default               |
+| -------------------- | --------------------------------------------------------------------------------------------- | --------------------- |
+| `LIBRECHAT_API_URL`  | Base URL of your LibreChat instance (no trailing slash)                                       | _(none)_              |
+| `LIBRECHAT_AGENT_ID` | Default Agent / Assistant ID to pre-select                                                    | _(none)_              |
+| `ENTRA_CLIENT_ID`    | Application (client) ID of the add-in's Entra SPA registration                                | _(none)_              |
+| `ENTRA_TENANT_ID`    | Directory (tenant) ID used for the single-tenant Entra authority                              | _(none)_              |
+| `ENTRA_API_SCOPE`    | Full delegated scope exposed by LibreChat, for example `api://<api-client-id>/access_as_user` | _(none)_              |
+| `APP_NAME`           | Product name shown in the task pane header, title, and notification strings                   | `AI Assistant`        |
+| `APP_LOGO_URL`       | Absolute URL to your logo for the task pane header                                            | bundled `icon-32.png` |
+| `ICON_LABEL`         | Badge drawn on the main ribbon icon at runtime (`DEV`, `STB`, or empty)                       | _(none — production)_ |
 
 > **Note:** `APP_NAME` controls all visible product-name references in the task pane UI at runtime. It does **not** update `manifest.xml` — that file is read by Outlook at install time and must be edited separately (see below).
 
 > The LibreChat agent owns its persona and output contract (security analysis, summary, suggested reply). The add-in does not ship local system prompts — configure them on the agent itself.
+
+---
+
+## 🔐 Entra ID Setup
+
+An administrator must configure two single-tenant app registrations: one SPA registration for this Outlook add-in and one API registration for LibreChat.
+
+### 1. Register the Outlook add-in SPA
+
+1. In **Microsoft Entra admin center → App registrations**, create or select the SPA registration for this add-in.
+2. Under **Authentication**, add the NAA redirect URI as a **Single-page application** redirect URI:
+   `brk-multihub://<add-in-origin>`
+3. Copy the SPA registration's **Application (client) ID** into `ENTRA_CLIENT_ID`.
+4. Copy the directory's **Directory (tenant) ID** into `ENTRA_TENANT_ID`.
+
+Use the origin represented by the deployed add-in URL in the redirect URI. Keep the registration single-tenant and do not create a client secret for the SPA.
+
+### 2. Expose and authorize the LibreChat API scope
+
+1. In the LibreChat API app registration, open **Expose an API** and add the delegated scope `access_as_user`.
+2. Use the resulting full scope URI as `ENTRA_API_SCOPE`, for example:
+   `api://<librechat-api-client-id>/access_as_user`
+3. In **Expose an API → Authorized client applications**, pre-authorize the Outlook add-in SPA by adding its client ID and selecting the `access_as_user` scope.
+4. In the LibreChat API app registration manifest, set:
+   `"accessTokenAcceptedVersion": 2`
+
+> [!WARNING]
+> Missing pre-authorization causes an unexpected consent prompt when the add-in tries to sign in. This is an app-registration problem, not an API-key problem.
+
+> [!WARNING]
+> `accessTokenAcceptedVersion: 1` causes LibreChat to reject the token with a confusing issuer-mismatch error and usually surfaces as HTTP 401. Set it to `2` on the LibreChat API registration.
+
+### 3. Configure LibreChat OIDC validation
+
+Add the OIDC block to the `librechat.yaml` configuration used by LibreChat. The `issuer` must be the tenant-specific Microsoft identity platform v2 issuer, and `audience` must be the LibreChat API application's client ID:
+
+```yaml
+endpoints:
+  agents:
+    remoteApi:
+      auth:
+        apiKey:
+          enabled: false
+        oidc:
+          enabled: true
+          issuer: https://login.microsoftonline.com/<tenant-id>/v2.0
+          audience: <librechat-api-client-id>
+```
+
+The `audience` value is the API registration's client ID, not the full `api://.../access_as_user` scope URI. Restart LibreChat after changing this configuration.
+
+### 4. Configure the add-in environment
+
+Set the following values in `.env` for local development or in the deployment environment for production:
+
+```bash
+LIBRECHAT_API_URL=https://chat.example.com
+LIBRECHAT_AGENT_ID=agent_xxxxx
+ENTRA_CLIENT_ID=<outlook-add-in-spa-client-id>
+ENTRA_TENANT_ID=<tenant-id>
+ENTRA_API_SCOPE=api://<librechat-api-client-id>/access_as_user
+```
+
+The add-in acquires the access token silently through NAA and sends it as a bearer token to LibreChat. Users do not enter or store an API key in the add-in.
 
 ---
 
@@ -183,12 +253,15 @@ sequenceDiagram
     participant User
     participant Outlook
     participant Add-in
+    participant Entra ID
     participant LibreChat
 
     User->>Outlook: Opens email & clicks ribbon button
     Outlook->>Add-in: Triggers taskpane (Office.js)
     Add-in->>Outlook: Reads email (subject, from, to, body)
-    Add-in->>LibreChat: POST /chat/completions
+    Add-in->>Entra ID: Acquire access token via NAA
+    Entra ID-->>Add-in: Bearer access token
+    Add-in->>LibreChat: POST /chat/completions with bearer token
     LibreChat-->>Add-in: AI response
     Add-in-->>User: Displays result in taskpane
 ```
@@ -201,12 +274,13 @@ sequenceDiagram
 
 ## 🔒 Security
 
-| Concern             | How it's handled                                                                                                |
-| ------------------- | --------------------------------------------------------------------------------------------------------------- |
-| **API key storage** | Stored in Outlook roaming settings (synced via your mailbox) — only sent in API calls to your configured endpoint |
-| **HTML rendering**  | All API responses are sanitized with [DOMPurify](https://github.com/cure53/DOMPurify) before being rendered     |
-| **Permissions**     | The add-in only requests `ReadWriteItem` — scoped to the current email                                          |
-| **Network**         | All traffic goes directly to **your** LibreChat instance — no third-party services involved                     |
+| Concern                | Approach                                                                                                          |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Authentication**     | Entra access tokens are acquired through NAA and sent as bearer tokens only to your configured LibreChat endpoint |
+| **Credential storage** | The add-in does not request or store API keys; MSAL manages its token cache for the signed-in Entra account       |
+| **HTML rendering**     | All API responses are sanitized with [DOMPurify](https://github.com/cure53/DOMPurify) before being rendered       |
+| **Permissions**        | The add-in only requests `ReadWriteItem` — scoped to the current email                                            |
+| **Network**            | All traffic goes directly to **your** LibreChat instance — no third-party services involved                       |
 
 ---
 
