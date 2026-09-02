@@ -166,63 +166,77 @@
           <div class="card">
             <div class="card-header">
               <div class="card-header-left">
-                <span class="card-icon">🔑</span>
-                <h3 data-i18n="settings.apiKeyLabel">API Key</h3>
+                <span class="card-icon">�</span>
+                <h3 data-i18n="settings.title">Settings</h3>
               </div>
             </div>
             <div class="card-body">
-              <p id="api-key-description" class="card-description">
-                Your personal key to authenticate with the service.
+              <p id="account-status" class="card-description">
+                <span data-i18n="auth.signingIn">Signing you in…</span>
               </p>
-              <input
-                type="password"
-                id="api-key"
-                data-i18n-placeholder="settings.apiKeyPlaceholder"
-                placeholder="Your API key"
-                class="settings-input"
-              />
-              <button
-                id="test-connection-btn"
-                class="btn btn-test-connection"
-                data-i18n="settings.testConnection"
-              >
-                Save &amp; Test Connection
-              </button>
-              <div id="connection-status" class="hidden"></div>
             </div>
           </div>
 
-          <details id="advanced-section" class="advanced hidden">
-            <summary class="advanced-summary">
-              <span class="advanced-chevron" aria-hidden="true">▸</span>
-              <span data-i18n="settings.advanced">Advanced</span>
-            </summary>
-            <div id="agent-section" class="hidden">
-              <div class="card">
-                <div class="card-header">
-                  <div class="card-header-left">
-                    <span class="card-icon">🤖</span>
-                    <h3 data-i18n="settings.agentLabel">Agent</h3>
-                  </div>
-                </div>
-                <div class="card-body">
-                  <p
-                    class="card-description"
-                    data-i18n="settings.agentDescription"
-                  >
-                    Choose which agent to use for generating responses.
-                  </p>
-                  <select id="agent-select" class="settings-input" disabled>
-                    <option value="" data-i18n="settings.agentPlaceholder">
-                      -- Select an agent --
-                    </option>
-                  </select>
+          <div id="agent-section">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-header-left">
+                  <span class="card-icon">🤖</span>
+                  <h3 data-i18n="settings.agentLabel">Agent</h3>
                 </div>
               </div>
-
-              <div id="agent-status" class="hidden"></div>
+              <div class="card-body">
+                <p
+                  class="card-description"
+                  data-i18n="settings.agentDescription"
+                >
+                  Choose which agent to use for generating responses.
+                </p>
+                <select id="agent-select" class="settings-input" disabled>
+                  <option value="" data-i18n="settings.agentPlaceholder">
+                    -- Select an agent --
+                  </option>
+                </select>
+              </div>
             </div>
-          </details>
+
+            <div id="agent-status" class="hidden"></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- AUTH BLOCKING SCREEN: host does not support Nested App Auth -->
+      <div id="auth-unsupported-view" class="hidden">
+        <section>
+          <div class="card">
+            <div class="card-body">
+              <p class="card-description" data-i18n="auth.naaUnsupported">
+                This add-in needs a newer version of Outlook that supports
+                single sign-on.
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- AUTH SCREEN: interactive sign-in required (popup dismissed/blocked) -->
+      <div id="auth-signin-view" class="hidden">
+        <section>
+          <div class="card">
+            <div class="card-body">
+              <p class="card-description" data-i18n="auth.signInRequired">
+                Please open the task pane to sign in.
+              </p>
+              <p id="auth-error-detail" class="card-description hidden"></p>
+              <button
+                id="auth-signin-btn"
+                class="btn btn-test-connection"
+                data-i18n="auth.signInButton"
+              >
+                Sign in
+              </button>
+            </div>
+          </div>
         </section>
       </div>
 

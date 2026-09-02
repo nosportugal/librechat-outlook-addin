@@ -1,6 +1,6 @@
 {
   "name": "librechat-outlook-addin",
-  "version": "1.0.0",
+  "version": "0.6.0",
   "description": "Outlook Add-in that sends emails to LibreChat for AI analysis",
   "main": "src/taskpane/taskpane.js",
   "packageManager": "npm@10.9.8",
@@ -12,10 +12,13 @@
     "build": "webpack --mode production && node scripts/label-icons.js",
     "dev": "webpack serve --mode development",
     "start": "webpack serve --mode development",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@vitest/coverage-v8": "^4.1.11",
     "copy-webpack-plugin": "^14.0.0",
     "css-loader": "^7.1.2",
     "dotenv": "^17.3.1",
@@ -23,12 +26,15 @@
     "globals": "^17.11.0",
     "html-webpack-plugin": "^5.6.0",
     "jimp": "^1.6.1",
+    "jsdom": "^30.0.1",
     "style-loader": "^4.0.0",
+    "vitest": "^4.1.11",
     "webpack": "^5.97.0",
     "webpack-cli": "^5.1.4",
     "webpack-dev-server": "^6.0.0"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.20.0",
     "dompurify": "^3.4.12",
     "marked": "^17.0.4"
   },

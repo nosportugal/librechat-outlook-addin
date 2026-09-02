@@ -3,11 +3,11 @@ import {marked} from "marked";
 import DOMPurify from "dompurify";
 import "./taskpane.css";
 import {initI18n, t} from "../i18n.js";
+import {isNaaSupported, getAccessToken, getSignedInUser} from "../auth.js";
 
 const ENV = (typeof window !== "undefined" && window.__ENV) || {};
 const ENV_API_URL = ENV.LIBRECHAT_API_URL || "";
 const ENV_AGENT_ID = ENV.LIBRECHAT_AGENT_ID || "";
-const ENV_API_KEY_HELP = ENV.LIBRECHAT_API_KEY_HELP || "";
 const ENV_APP_NAME = ENV.APP_NAME || "AI Assistant";
 const ENV_APP_LOGO_URL = ENV.APP_LOGO_URL || "";
 
@@ -38,12 +38,9 @@ function applyOfficeTheme() {
 
 function loadSettings() {
   const rs = Office.context.roamingSettings;
-  const apiKey = rs.get("apiKey") || "";
   const agentId = rs.get("agentId") || "";
 
-  document.getElementById("api-key").value = apiKey;
-
-  return {apiUrl: ENV_API_URL, apiKey, model: agentId || ENV_AGENT_ID};
+  return {apiUrl: ENV_API_URL, model: agentId || ENV_AGENT_ID};
 }
 
 function getSettings() {
@@ -54,26 +51,41 @@ function getSettings() {
 
   return {
     apiUrl: ENV_API_URL,
-    apiKey: document.getElementById("api-key").value.trim(),
     model: selectedAgent || storedAgent || ENV_AGENT_ID,
   };
 }
 
+// Remove the legacy per-user API key from roaming settings. The field is gone
+// from the UI; leaving the value behind would be dead credential material.
+// Non-blocking by design: a purge failure must never stop the add-in.
+async function purgeLegacyApiKey() {
+  try {
+    const rs = Office.context.roamingSettings;
+    if (!rs.get("apiKey")) return;
+    rs.remove("apiKey");
+    await new Promise((resolve) => {
+      rs.saveAsync(() => resolve());
+    });
+  } catch (err) {
+    console.warn("Could not purge legacy apiKey from roamingSettings:", err);
+  }
+}
+
 // --- Agent listing ---
 
-async function listAgents(apiKey) {
+async function listAgents() {
   const base = ENV_API_URL.replace(/\/+$/, "");
   const url = base + "/api/agents/v1/models";
 
-  const headers = {};
-  if (apiKey) {
-    headers["Authorization"] = `Bearer ${apiKey}`;
-  }
+  const token = await getAccessToken({allowInteractive: true});
+  const headers = {Authorization: `Bearer ${token}`};
 
   const response = await fetch(url, {method: "GET", headers});
 
   if (!response.ok) {
-    throw new Error(`${response.status} ${response.statusText}`);
+    const err = new Error(`${response.status} ${response.statusText}`);
+    err.status = response.status;
+    throw err;
   }
 
   const data = await response.json();
@@ -109,71 +121,39 @@ function populateAgentDropdown(agents, selectedId) {
   }
 }
 
-function showConnectionStatus(type, message) {
-  const el = document.getElementById("connection-status");
+function showAgentStatus(type, message) {
+  const el = document.getElementById("agent-status");
   el.className = `connection-status connection-status-${type}`;
   el.textContent = message;
   el.classList.remove("hidden");
 }
 
-function hideConnectionStatus() {
-  document.getElementById("connection-status").classList.add("hidden");
+function hideAgentStatus() {
+  document.getElementById("agent-status").classList.add("hidden");
 }
 
-async function testConnectionAndLoadAgents() {
-  const apiKey = document.getElementById("api-key").value.trim();
-  if (!apiKey) {
-    showConnectionStatus("error", t("error.noApiKey"));
-    return;
-  }
-
-  const btn = document.getElementById("test-connection-btn");
-  btn.disabled = true;
-  const originalText = btn.textContent;
-  btn.textContent = t("settings.testing");
-  hideConnectionStatus();
-
+// Loads the agent list once, after sign-in, and populates the dropdown.
+async function loadAgents() {
+  hideAgentStatus();
+  const select = document.getElementById("agent-select");
   try {
-    // Save the API key first
-    const rs = Office.context.roamingSettings;
-    rs.set("apiKey", apiKey);
-    await new Promise((resolve, reject) => {
-      rs.saveAsync((result) => {
-        if (result.status === Office.AsyncResultStatus.Failed) {
-          reject(new Error(result.error.message));
-        } else {
-          resolve();
-        }
-      });
-    });
-
-    const agents = await listAgents(apiKey);
-
+    const agents = await listAgents();
     if (agents.length === 0) {
-      showConnectionStatus("warning", t("settings.noAgentsFound"));
-      document.getElementById("agent-section").classList.add("hidden");
-      document.getElementById("advanced-section").classList.add("hidden");
-    } else {
-      const rs2 = Office.context.roamingSettings;
-      const storedAgentId = rs2.get("agentId") || ENV_AGENT_ID;
-      populateAgentDropdown(agents, storedAgentId);
-      showConnectionStatus(
-        "success",
-        t("settings.connectionSuccess").replace("{0}", agents.length),
-      );
-      document.getElementById("agent-section").classList.remove("hidden");
-      document.getElementById("advanced-section").classList.remove("hidden");
+      showAgentStatus("warning", t("settings.noAgentsFound"));
+      select.disabled = true;
+      return;
     }
+    const rs = Office.context.roamingSettings;
+    const storedAgentId = rs.get("agentId") || ENV_AGENT_ID;
+    populateAgentDropdown(agents, storedAgentId);
   } catch (err) {
-    showConnectionStatus(
-      "error",
-      t("settings.connectionFailed") + (err.message || ""),
-    );
-    document.getElementById("agent-section").classList.add("hidden");
-    document.getElementById("advanced-section").classList.add("hidden");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = originalText;
+    select.disabled = true;
+    if (err.status === 401) {
+      // Token was valid, but LibreChat could not match it to a user.
+      showAgentStatus("error", t("auth.identityMismatch"));
+    } else {
+      showAgentStatus("error", err.message || "" || t("error.unexpected"));
+    }
   }
 }
 
@@ -423,10 +403,8 @@ async function callLibreChat(
 
   const headers = {
     "Content-Type": "application/json",
+    Authorization: `Bearer ${await getAccessToken({allowInteractive: true})}`,
   };
-  if (settings.apiKey) {
-    headers["Authorization"] = `Bearer ${settings.apiKey}`;
-  }
 
   const payload = {
     model: settings.model,
@@ -547,34 +525,108 @@ function insertReplyIntoBody(item, wrappedReply, onError) {
 function showView(view) {
   const mainView = document.getElementById("main-view");
   const settingsView = document.getElementById("settings-view");
+  const unsupportedView = document.getElementById("auth-unsupported-view");
+  const signInView = document.getElementById("auth-signin-view");
   const settingsBtn = document.getElementById("settings-btn");
   const backBtn = document.getElementById("back-btn");
 
+  // Hide everything, then reveal the requested view.
+  [mainView, settingsView, unsupportedView, signInView].forEach((el) =>
+    el.classList.add("hidden"),
+  );
+  settingsBtn.classList.add("hidden");
+  backBtn.classList.add("hidden");
+
   if (view === "settings") {
-    mainView.classList.add("hidden");
     settingsView.classList.remove("hidden");
-    settingsBtn.classList.add("hidden");
     backBtn.classList.remove("hidden");
+  } else if (view === "auth-unsupported") {
+    unsupportedView.classList.remove("hidden");
+  } else if (view === "auth-signin") {
+    signInView.classList.remove("hidden");
   } else {
-    settingsView.classList.add("hidden");
     mainView.classList.remove("hidden");
-    backBtn.classList.add("hidden");
     settingsBtn.classList.remove("hidden");
+  }
+}
+
+// --- Auth gate ---
+
+function setAccountStatus(text) {
+  const el = document.getElementById("account-status");
+  if (el) el.textContent = text;
+}
+
+// Signs the user in interactively (the ONLY place consent can be granted) and
+// returns the token. Throws typed errors that the caller maps to a screen.
+async function signInInteractively() {
+  setAccountStatus(t("auth.signingIn"));
+  return getAccessToken({allowInteractive: true});
+}
+
+// The startup gate. Returns true when the add-in may proceed to the requested
+// action; false when it rendered a blocking/sign-in screen and must stop.
+async function ensureSignedIn() {
+  if (!isNaaSupported()) {
+    showView("auth-unsupported");
+    return false;
+  }
+  try {
+    await signInInteractively();
+  } catch (err) {
+    // Popup dismissed/blocked or another interactive failure: show a
+    // retryable screen with a Sign in button.
+    showAuthSignIn(err);
+    return false;
+  }
+  await purgeLegacyApiKey();
+  await refreshAccountCard();
+  return true;
+}
+
+function showAuthSignIn(err) {
+  const detail = document.getElementById("auth-error-detail");
+  if (detail) {
+    const msg = err && err.message ? err.message : "";
+    detail.textContent = msg ? t("auth.failed") + msg : "";
+    detail.classList.toggle("hidden", !msg);
+  }
+  showView("auth-signin");
+}
+
+async function refreshAccountCard() {
+  try {
+    const user = await getSignedInUser();
+    setAccountStatus(user ? t("auth.signedInAs", user) : t("auth.signingIn"));
+  } catch {
+    setAccountStatus(t("auth.signingIn"));
+  }
+}
+
+// Retry entry point for the Sign in button on the auth-signin view.
+async function retrySignIn() {
+  const btn = document.getElementById("auth-signin-btn");
+  if (btn) btn.disabled = true;
+  try {
+    await signInInteractively();
+    await purgeLegacyApiKey();
+    await refreshAccountCard();
+    // Signed in — reload so the pending action runs cleanly.
+    window.location.reload();
+  } catch (err) {
+    showAuthSignIn(err);
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
 // --- Main flow ---
 
+// With SSO the startup gate has already signed the user in, so by the time an
+// action runs there is nothing to validate. Kept as a thin wrapper so the
+// action handlers read the same way as before.
 function validateSettings() {
-  const settings = getSettings();
-
-  if (!settings.apiKey) {
-    showError(t("error.noApiKey"));
-    showView("settings");
-    return null;
-  }
-
-  return settings;
+  return getSettings();
 }
 
 async function summarizeEmail() {
@@ -718,10 +770,10 @@ async function composeReplyWithCustomInstructions() {
     const content = `${directive}\n\nAdditional user instructions (apply within your standard output contract):\n${customPrompt}\n\nHere is the email:\n\n${emailText}`;
     const messages = [{role: "user", content}];
 
-    const headers = {"Content-Type": "application/json"};
-    if (settings.apiKey) {
-      headers["Authorization"] = `Bearer ${settings.apiKey}`;
-    }
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${await getAccessToken({allowInteractive: true})}`,
+    };
 
     const payload = {model: settings.model, messages, stream: false};
     const resp = await fetch(url, {
@@ -941,7 +993,7 @@ function setupToneView(initialTone) {
 
 // --- Init ---
 
-Office.onReady((info) => {
+Office.onReady(async (info) => {
   if (info.host === Office.HostType.Outlook) {
     applyOfficeTheme();
     initI18n(ENV_APP_NAME);
@@ -967,39 +1019,22 @@ Office.onReady((info) => {
       el.title = t(el.dataset.i18nTitle);
     });
 
-    // Set API key description. Prefer the configurable markdown blurb from
-    // LIBRECHAT_API_KEY_HELP (supports inline [label](url) hyperlinks); fall
-    // back to the localized text + auto-link to LIBRECHAT_API_URL.
-    const apiKeyDesc = document.getElementById("api-key-description");
-    if (apiKeyDesc) {
-      if (ENV_API_KEY_HELP) {
-        const html = DOMPurify.sanitize(marked.parseInline(ENV_API_KEY_HELP), {
-          ALLOWED_TAGS: ["a", "strong", "em", "code", "br"],
-          ALLOWED_ATTR: ["href", "target", "rel"],
-        });
-        apiKeyDesc.innerHTML = html;
-        apiKeyDesc.querySelectorAll("a[href]").forEach((a) => {
-          a.target = "_blank";
-          a.rel = "noopener noreferrer";
-        });
-      } else if (ENV_API_URL) {
-        const descText = t("settings.apiKeyDescription");
-        const linkLabel = t("settings.apiKeyLinkLabel");
-        apiKeyDesc.textContent = descText + " ";
-        const link = document.createElement("a");
-        link.href = ENV_API_URL;
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        link.textContent = linkLabel;
-        apiKeyDesc.appendChild(link);
-        apiKeyDesc.appendChild(document.createTextNode("."));
-      }
-    }
-
     loadSettings();
 
+    // The Sign in button lives on the auth-signin screen; wire it once.
+    document
+      .getElementById("auth-signin-btn")
+      .addEventListener("click", retrySignIn);
+
+    // Startup gate: host must support NAA and the user must be signed in
+    // before anything else runs. This is the only place consent can be granted.
+    const signedIn = await ensureSignedIn();
+    if (!signedIn) return;
+
+    // Agents load once, right after sign-in — the dropdown is the only setting.
+    loadAgents();
+
     const action = new URLSearchParams(window.location.search).get("action");
-    const currentSettings = getSettings();
 
     // Wire up settings gear button and back button
     document.getElementById("settings-btn").addEventListener("click", () => {
@@ -1009,24 +1044,12 @@ Office.onReady((info) => {
       showView("main");
     });
 
-    // Wire up test connection button
-    document
-      .getElementById("test-connection-btn")
-      .addEventListener("click", () => {
-        testConnectionAndLoadAgents();
-      });
-
     // Wire up agent selection persistence
     document.getElementById("agent-select").addEventListener("change", () => {
       const rs = Office.context.roamingSettings;
       rs.set("agentId", document.getElementById("agent-select").value);
       rs.saveAsync(() => {});
     });
-
-    // Auto-load agents if API key exists
-    if (currentSettings.apiKey) {
-      testConnectionAndLoadAgents();
-    }
 
     document.getElementById("copy-btn").addEventListener("click", () => {
       const content = document.getElementById("response-content").textContent;
@@ -1042,10 +1065,9 @@ Office.onReady((info) => {
       });
     });
 
-    // If no API key or action=settings, show settings view; otherwise show main and auto-trigger
+    // Signed in: first-run users go straight to the requested action (no
+    // Settings detour). Settings is only shown when explicitly requested.
     if (action === "settings") {
-      showView("settings");
-    } else if (!currentSettings.apiKey) {
       showView("settings");
     } else if (action === "tone") {
       showView("main");

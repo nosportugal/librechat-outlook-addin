@@ -5,3 +5,5 @@ dist
 *.md
 .env
 .env.*
+.dockerignore
+Dockerfile

@@ -20,7 +20,9 @@ function envConfigJS() {
   const env = {
     LIBRECHAT_API_URL: process.env.LIBRECHAT_API_URL || "",
     LIBRECHAT_AGENT_ID: process.env.LIBRECHAT_AGENT_ID || "",
-    LIBRECHAT_API_KEY_HELP: process.env.LIBRECHAT_API_KEY_HELP || "",
+    ENTRA_CLIENT_ID: process.env.ENTRA_CLIENT_ID || "",
+    ENTRA_TENANT_ID: process.env.ENTRA_TENANT_ID || "",
+    ENTRA_API_SCOPE: process.env.ENTRA_API_SCOPE || "",
     APP_NAME: process.env.APP_NAME || "",
     APP_LOGO_URL: process.env.APP_LOGO_URL || "",
   };
@@ -55,6 +57,13 @@ module.exports = {
     path: path.resolve(__dirname, "dist"),
     filename: "[name].js",
     clean: true,
+  },
+  optimization: {
+    // @azure/msal-browser (~200 KB) is needed by both the taskpane and the
+    // commands entry points; split it (and any other shared code) into one
+    // chunk so it is not bundled twice. HtmlWebpackPlugin picks the chunk up
+    // automatically for its listed entries.
+    splitChunks: {chunks: "all"},
   },
   devServer: {
     static: {
