@@ -22,7 +22,10 @@ function envVarsFrom(relFile, env) {
   const fn = new Function("process", `${decl}; return envConfigJS();`);
   const output = fn(fakeProcess);
   return JSON.parse(
-    output.trim().replace(/^window\.__ENV = /, "").replace(/;$/, ""),
+    output
+      .trim()
+      .replace(/^window\.__ENV = /, "")
+      .replace(/;$/, ""),
   );
 }
 

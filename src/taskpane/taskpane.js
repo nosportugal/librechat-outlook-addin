@@ -152,7 +152,7 @@ async function loadAgents() {
       // Token was valid, but LibreChat could not match it to a user.
       showAgentStatus("error", t("auth.identityMismatch"));
     } else {
-      showAgentStatus("error", (err.message || "") || t("error.unexpected"));
+      showAgentStatus("error", err.message || "" || t("error.unexpected"));
     }
   }
 }

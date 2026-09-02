@@ -1,6 +1,6 @@
 {
   "name": "librechat-outlook-addin",
-  "version": "1.0.0",
+  "version": "0.6.0",
   "description": "Outlook Add-in that sends emails to LibreChat for AI analysis",
   "main": "src/taskpane/taskpane.js",
   "packageManager": "npm@10.9.8",

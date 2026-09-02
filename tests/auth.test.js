@@ -63,7 +63,9 @@ describe("auth.js", () => {
 
   describe("isNaaSupported", () => {
     it("returns true when the NestedAppAuth 1.1 requirement set is supported", () => {
-      globalThis.Office.context.requirements.isSetSupported.mockReturnValue(true);
+      globalThis.Office.context.requirements.isSetSupported.mockReturnValue(
+        true,
+      );
       expect(auth.isNaaSupported()).toBe(true);
       expect(
         globalThis.Office.context.requirements.isSetSupported,
@@ -71,7 +73,9 @@ describe("auth.js", () => {
     });
 
     it("returns false when the NestedAppAuth 1.1 requirement set is not supported", () => {
-      globalThis.Office.context.requirements.isSetSupported.mockReturnValue(false);
+      globalThis.Office.context.requirements.isSetSupported.mockReturnValue(
+        false,
+      );
       expect(auth.isNaaSupported()).toBe(false);
     });
 
@@ -164,9 +168,9 @@ describe("auth.js", () => {
 
     it("throws a descriptive error when ENTRA_API_SCOPE is missing", async () => {
       setEnv({ENTRA_API_SCOPE: ""});
-      await expect(auth.getAccessToken({allowInteractive: true})).rejects.toThrow(
-        /ENTRA_API_SCOPE/,
-      );
+      await expect(
+        auth.getAccessToken({allowInteractive: true}),
+      ).rejects.toThrow(/ENTRA_API_SCOPE/);
     });
   });
 
