@@ -6,6 +6,8 @@ import {InteractionRequiredAuthError} from "@azure/msal-browser";
 const mockAcquireTokenSilent = vi.fn();
 const mockAcquireTokenPopup = vi.fn();
 const mockGetAllAccounts = vi.fn();
+const mockGetActiveAccount = vi.fn();
+const mockSetActiveAccount = vi.fn();
 const mockCreateNestable = vi.fn();
 
 vi.mock("@azure/msal-browser", async (importOriginal) => {
@@ -35,6 +37,8 @@ function makeClient({accounts = []} = {}) {
     acquireTokenSilent: mockAcquireTokenSilent,
     acquireTokenPopup: mockAcquireTokenPopup,
     getAllAccounts: mockGetAllAccounts.mockReturnValue(accounts),
+    getActiveAccount: mockGetActiveAccount,
+    setActiveAccount: mockSetActiveAccount,
   };
 }
 
@@ -189,6 +193,58 @@ describe("auth.js", () => {
       mockCreateNestable.mockResolvedValue(makeClient({accounts: []}));
       const user = await auth.getSignedInUser();
       expect(user).toBeNull();
+    });
+  });
+
+  describe("account selection", () => {
+    it("uses the active account when multiple accounts are cached", async () => {
+      const normalAccount = {username: "user@nos.pt"};
+      setEnv();
+      mockGetActiveAccount.mockReturnValue(normalAccount);
+      mockCreateNestable.mockResolvedValue(
+        makeClient({accounts: [{username: "admin@nos.pt"}, normalAccount]}),
+      );
+      mockAcquireTokenSilent.mockResolvedValue({
+        accessToken: "normal-token",
+        account: normalAccount,
+      });
+
+      const token = await auth.getAccessToken({allowInteractive: false});
+
+      expect(token).toBe("normal-token");
+      expect(mockAcquireTokenSilent).toHaveBeenCalledWith({
+        scopes: [SCOPE],
+        account: normalAccount,
+      });
+    });
+
+    it("forces an interactive login when explicitly signing in", async () => {
+      setEnv();
+      mockAcquireTokenPopup.mockResolvedValue({
+        accessToken: "selected-token",
+        account: {username: "user@nos.pt"},
+      });
+
+      await auth.signIn();
+
+      expect(mockAcquireTokenSilent).not.toHaveBeenCalled();
+      expect(mockAcquireTokenPopup).toHaveBeenCalledWith({
+        scopes: [SCOPE],
+        prompt: "login",
+      });
+    });
+  });
+
+  describe("signOut", () => {
+    it("clears the active account from the MSAL cache", async () => {
+      const account = {username: "user@nos.pt"};
+      setEnv();
+      mockCreateNestable.mockResolvedValue(makeClient({accounts: [account]}));
+
+      mockGetActiveAccount.mockReturnValue(account);
+      await auth.signOut();
+
+      expect(mockSetActiveAccount).toHaveBeenCalledWith(null);
     });
   });
 });

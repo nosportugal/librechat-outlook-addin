@@ -2,7 +2,10 @@ const path = require("path");
 const fs = require("fs");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
+const webpack = require("webpack");
 const {LABELS, makeLabeledIconBuffer} = require("./scripts/label-icons.js");
+const {stampManifestVersion} = require("./scripts/stampManifestVersion.js");
+const {version: ADDIN_VERSION} = require("./package.json");
 
 // Load .env so the dev server can inject the same env-config.js that server.js
 // serves in production. Without this, window.__ENV is empty and API calls
@@ -114,6 +117,9 @@ module.exports = {
     },
   },
   plugins: [
+    new webpack.DefinePlugin({
+      __ADDIN_VERSION__: JSON.stringify(ADDIN_VERSION),
+    }),
     new HtmlWebpackPlugin({
       filename: "taskpane.html",
       template: "./src/taskpane/taskpane.html",
@@ -135,6 +141,12 @@ module.exports = {
           from: "assets",
           to: "assets",
           noErrorOnMissing: true,
+        },
+        {
+          from: "manifest.xml",
+          to: "manifest.xml",
+          transform: (content) =>
+            stampManifestVersion(content.toString("utf8")),
         },
         {
           from: "src/taskpane/taskpane.css",

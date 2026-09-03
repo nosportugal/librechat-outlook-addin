@@ -22,9 +22,30 @@
         <button
           id="settings-btn"
           class="btn btn-icon header-action"
-          title="Settings"
+          data-i18n-title="auth.accountTooltip"
+          title="Account"
         >
-          ⚙️
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M6.65 1.5h2.7l.42 1.55c.3.11.59.23.86.4l1.5-.62 1.91 1.91-.62 1.5c.17.27.3.56.4.86l1.55.42v2.7l-1.55.42c-.1.3-.23.59-.4.86l.62 1.5-1.91 1.91-1.5-.62c-.27.17-.56.3-.86.4L9.35 15H6.65l-.42-1.55c-.3-.1-.59-.23-.86-.4l-1.5.62-1.91-1.91.62-1.5a5.2 5.2 0 0 1-.4-.86L.63 8.98v-2.7l1.55-.42c.1-.3.23-.59.4-.86l-.62-1.5 1.91-1.91 1.5.62c.27-.17.56-.3.86-.4L6.65 1.5Z"
+              stroke="currentColor"
+              stroke-width="1.2"
+              stroke-linejoin="round"
+            />
+            <circle
+              cx="8"
+              cy="7.63"
+              r="2.05"
+              stroke="currentColor"
+              stroke-width="1.2"
+            />
+          </svg>
         </button>
         <button
           id="back-btn"
@@ -167,14 +188,47 @@
           <div class="card">
             <div class="card-header">
               <div class="card-header-left">
-                <span class="card-icon">�</span>
-                <h3 data-i18n="settings.title">Settings</h3>
+                <span class="card-icon" aria-hidden="true">◉</span>
+                <h3 data-i18n="settings.title">Account</h3>
               </div>
             </div>
             <div class="card-body">
-              <p id="account-status" class="card-description">
-                <span data-i18n="auth.signingIn">Signing you in…</span>
-              </p>
+              <div class="account-identity">
+                <div class="account-avatar" aria-hidden="true">@</div>
+                <div>
+                  <strong id="account-email">-</strong>
+                  <span id="account-status" class="account-status">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-left">
+                <span class="card-icon" aria-hidden="true">⌁</span>
+                <h3 data-i18n="settings.connectionTitle">Connection</h3>
+              </div>
+            </div>
+            <div class="card-body settings-details">
+              <div class="settings-detail-row">
+                <span data-i18n="settings.instanceLabel"
+                  >LibreChat instance</span
+                >
+                <strong id="instance-host">-</strong>
+              </div>
+              <div class="settings-detail-row">
+                <span data-i18n="settings.deploymentVersion"
+                  >Deployment version</span
+                >
+                <strong id="deployment-version">-</strong>
+              </div>
+              <div class="settings-detail-row">
+                <span data-i18n="settings.manifestVersion"
+                  >Manifest version</span
+                >
+                <strong id="manifest-version">-</strong>
+              </div>
             </div>
           </div>
 
@@ -198,10 +252,33 @@
                     -- Select an agent --
                   </option>
                 </select>
+                <button
+                  id="refresh-agents-btn"
+                  class="btn btn-icon refresh-agents-btn"
+                  data-i18n-title="settings.refreshAgents"
+                  title="Refresh agents"
+                  aria-label="Refresh agents"
+                >
+                  ↻
+                </button>
               </div>
             </div>
 
             <div id="agent-status" class="hidden"></div>
+          </div>
+
+          <button
+            id="sign-out-btn"
+            class="btn btn-sign-out"
+            data-i18n="auth.signOut"
+          >
+            Sign out
+          </button>
+          <div
+            id="settings-error-box"
+            class="hidden connection-status connection-status-error"
+          >
+            <span id="settings-error-message"></span>
           </div>
         </section>
       </div>

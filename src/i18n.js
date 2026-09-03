@@ -9,7 +9,14 @@ const translations = {
     "dialog.submit": "Generate Reply",
 
     // Taskpane
-    "settings.title": "Settings",
+    "settings.title": "Account",
+    "settings.connectionTitle": "Connection",
+    "settings.instanceLabel": "LibreChat instance",
+    "settings.deploymentVersion": "Deployment version",
+    "settings.manifestVersion": "Manifest version",
+    "settings.connected": "Connected to LibreChat",
+    "settings.notConfigured": "Not configured",
+    "settings.refreshAgents": "Refresh agents",
     "settings.noAgentsFound": "Connected, but no agents found.",
     "settings.agentLabel": "Agent",
     "settings.agentDescription":
@@ -30,6 +37,8 @@ const translations = {
     "auth.signingIn": "Signing you in…",
     "auth.signInRequired": "Please open the {app} task pane to sign in.",
     "auth.signInButton": "Sign in",
+    "auth.signOut": "Sign out",
+    "auth.accountTooltip": "Account",
     "auth.naaUnsupported":
       "This add-in needs a newer version of Outlook that supports single sign-on. Please update Outlook or use Outlook on the web.",
     "auth.failed": "Sign-in failed: ",
@@ -61,6 +70,7 @@ const translations = {
     "error.noComposeBody": "(Could not read compose body)",
     "error.noApiResponse": "No response content from API.",
     "error.unexpected": "An unexpected error occurred.",
+    "error.signOutFailed": "Sign-out failed: ",
     "error.enterPrompt": "Please enter prompt instructions.",
     "error.readBody": "Failed to read compose body: ",
     "error.insertReply": "Failed to insert reply: ",
@@ -88,7 +98,14 @@ const translations = {
     "dialog.submit": "Gerar Resposta",
 
     // Taskpane
-    "settings.title": "Definições",
+    "settings.title": "Conta",
+    "settings.connectionTitle": "Ligação",
+    "settings.instanceLabel": "Instância do LibreChat",
+    "settings.deploymentVersion": "Versão da implementação",
+    "settings.manifestVersion": "Versão do manifesto",
+    "settings.connected": "Ligado ao LibreChat",
+    "settings.notConfigured": "Não configurado",
+    "settings.refreshAgents": "Atualizar agentes",
     "settings.noAgentsFound": "Ligado, mas nenhum agente encontrado.",
     "settings.agentLabel": "Agente",
     "settings.agentDescription":
@@ -110,6 +127,8 @@ const translations = {
     "auth.signingIn": "A iniciar sessão…",
     "auth.signInRequired": "Abra o painel do {app} para iniciar sessão.",
     "auth.signInButton": "Iniciar sessão",
+    "auth.signOut": "Terminar sessão",
+    "auth.accountTooltip": "Conta",
     "auth.naaUnsupported":
       "Este suplemento precisa de uma versão mais recente do Outlook que suporte início de sessão único. Atualize o Outlook ou utilize o Outlook na Web.",
     "auth.failed": "Falha no início de sessão: ",
@@ -141,6 +160,7 @@ const translations = {
     "error.noComposeBody": "(Não foi possível ler o corpo da composição)",
     "error.noApiResponse": "Sem conteúdo de resposta da API.",
     "error.unexpected": "Ocorreu um erro inesperado.",
+    "error.signOutFailed": "Falha ao terminar sessão: ",
     "error.enterPrompt": "Introduza as instruções do prompt.",
     "error.readBody": "Falha ao ler o corpo da composição: ",
     "error.insertReply": "Falha ao inserir a resposta: ",

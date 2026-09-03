@@ -11,7 +11,7 @@ describe("t() substitution", () => {
   });
 
   it("substitutes {app} with the configured app name", () => {
-    expect(t("settings.title")).toBe("Settings");
+    expect(t("settings.title")).toBe("Account");
   });
 
   it("substitutes positional {0} with the first extra argument", () => {

@@ -87,14 +87,18 @@ async function initMsal() {
 async function getAccessToken({allowInteractive} = {allowInteractive: false}) {
   const scope = requireConfig(env("ENTRA_API_SCOPE"), "ENTRA_API_SCOPE");
   const client = await initMsal();
+  const activeAccount = client.getActiveAccount?.();
   const request = {scopes: [scope]};
+  if (activeAccount) request.account = activeAccount;
 
   try {
     const result = await client.acquireTokenSilent(request);
+    if (result.account) client.setActiveAccount(result.account);
     return result.accessToken;
   } catch (err) {
     if (err instanceof InteractionRequiredAuthError && allowInteractive) {
       const result = await client.acquireTokenPopup(request);
+      if (result.account) client.setActiveAccount(result.account);
       return result.accessToken;
     }
     throw err;
@@ -109,8 +113,34 @@ async function getAccessToken({allowInteractive} = {allowInteractive: false}) {
  */
 async function getSignedInUser() {
   const client = await initMsal();
-  const accounts = client.getAllAccounts() || [];
-  return accounts.length > 0 ? accounts[0].username || null : null;
+  const account =
+    client.getActiveAccount?.() || (client.getAllAccounts() || [])[0];
+  return account ? account.username || null : null;
 }
 
-export {isNaaSupported, initMsal, getAccessToken, getSignedInUser};
+async function signIn() {
+  const scope = requireConfig(env("ENTRA_API_SCOPE"), "ENTRA_API_SCOPE");
+  const client = await initMsal();
+  const result = await client.acquireTokenPopup({
+    scopes: [scope],
+    prompt: "login",
+  });
+  if (result.account) client.setActiveAccount(result.account);
+  return result.accessToken;
+}
+
+async function signOut() {
+  const client = await initMsal();
+  // Nested App Auth does not support logoutPopup, logoutRedirect, or
+  // clearCache. Clear the active account so this task pane stops using it.
+  client.setActiveAccount(null);
+}
+
+export {
+  isNaaSupported,
+  initMsal,
+  getAccessToken,
+  getSignedInUser,
+  signIn,
+  signOut,
+};

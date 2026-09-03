@@ -172,6 +172,86 @@ header h1 {
   line-height: 1.4;
 }
 
+.account-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.account-avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  color: var(--primary);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.account-identity strong,
+.account-identity span {
+  display: block;
+}
+
+.account-identity strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.account-status {
+  margin-top: 2px;
+  color: var(--success);
+  font-size: 12px;
+}
+
+.settings-details {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.settings-detail-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 12px;
+}
+
+.settings-detail-row + .settings-detail-row {
+  border-top: 1px solid var(--border);
+}
+
+.settings-detail-row span {
+  color: var(--text-muted);
+}
+
+.settings-detail-row strong {
+  max-width: 58%;
+  overflow-wrap: anywhere;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.btn-sign-out {
+  width: 100%;
+  margin-top: 2px;
+  border: 1px solid var(--error-text);
+  background: var(--bg);
+  color: var(--error-text);
+}
+
+.btn-sign-out:hover:not(:disabled) {
+  background: var(--error-bg);
+}
+
+#settings-error-box {
+  margin-top: 10px;
+}
+
 .card-description a {
   color: var(--primary);
   text-decoration: none;
@@ -213,6 +293,13 @@ select.settings-input {
 select.settings-input:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.refresh-agents-btn {
+  flex: 0 0 auto;
+  margin-left: 6px;
+  padding: 6px;
+  font-size: 16px;
 }
 
 /* Test connection button */
