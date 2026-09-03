@@ -1,7 +1,6 @@
 /* global Office */
 import {marked} from "marked";
 import DOMPurify from "dompurify";
-import "./taskpane.css";
 import {initI18n, t} from "../i18n.js";
 import {isNaaSupported, getAccessToken, getSignedInUser} from "../auth.js";
 
