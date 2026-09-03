@@ -136,6 +136,10 @@ module.exports = {
           to: "assets",
           noErrorOnMissing: true,
         },
+        {
+          from: "src/taskpane/taskpane.css",
+          to: "taskpane.css",
+        },
       ],
     }),
   ],
