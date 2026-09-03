@@ -16,7 +16,9 @@ FROM node:24-alpine
 WORKDIR /app
 
 COPY --from=build /app/dist ./dist
-COPY server.js ./
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev --ignore-scripts --registry=https://registry.npmjs.org/
+COPY server.js otel.js ./
 
 RUN chown -R node:node /app
 

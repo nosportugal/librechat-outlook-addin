@@ -1,6 +1,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const {recordTelemetryEvent, shutdownTelemetry} = require("./otel");
 
 const PORT = process.env.PORT || 3000;
 const DIST = path.join(__dirname, "dist");
@@ -34,7 +35,119 @@ function envConfigJS() {
   return `window.__ENV = ${JSON.stringify(env)};`;
 }
 
-const server = http.createServer((req, res) => {
+function bounded(value, allowed, fallback = "unknown") {
+  return allowed.includes(value) ? value : fallback;
+}
+
+function boundedAction(action) {
+  return bounded(action, ["summarize", "reply", "tone"]);
+}
+
+function boundedOutcome(outcome) {
+  return bounded(outcome, ["completed", "failed", "cancelled"]);
+}
+
+function boundedErrorKind(kind) {
+  return bounded(
+    kind,
+    [
+      "auth",
+      "network",
+      "timeout",
+      "http_4xx",
+      "http_5xx",
+      "office",
+      "invalid_response",
+      "unknown",
+    ],
+    "unknown",
+  );
+}
+
+function normalizeTelemetryEvent(event) {
+  if (!event || typeof event !== "object") return null;
+  const action = boundedAction(event.action);
+  const outcome = boundedOutcome(event.outcome);
+  const errorKind = boundedErrorKind(event.errorKind);
+  const phaseDurations = event.phaseDurations || {};
+
+  return {
+    type: bounded(event.type, [
+      "addin_installed",
+      "addin_active_day",
+      "outlook_action_started",
+      "outlook_action_finished",
+    ]),
+    action,
+    outcome,
+    errorKind,
+    durationMs:
+      typeof event.durationMs === "number" ? event.durationMs : undefined,
+    phaseDurations: {
+      reading_email:
+        typeof phaseDurations.reading_email === "number"
+          ? phaseDurations.reading_email
+          : undefined,
+      thinking:
+        typeof phaseDurations.thinking === "number"
+          ? phaseDurations.thinking
+          : undefined,
+      inserting_result:
+        typeof phaseDurations.inserting_result === "number"
+          ? phaseDurations.inserting_result
+          : undefined,
+    },
+  };
+}
+
+async function handleTelemetry(req, res) {
+  if (req.method !== "POST") {
+    res.writeHead(405, {"Content-Type": "text/plain"});
+    res.end("Method Not Allowed");
+    return;
+  }
+
+  const auth = req.headers.authorization || "";
+  if (!auth.startsWith("Bearer ")) {
+    res.writeHead(401, {"Content-Type": "text/plain"});
+    res.end("Unauthorized");
+    return;
+  }
+
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(chunk);
+  }
+  const raw = Buffer.concat(chunks).toString("utf8");
+  if (raw.length > 32 * 1024) {
+    res.writeHead(413, {"Content-Type": "text/plain"});
+    res.end("Payload Too Large");
+    return;
+  }
+
+  let event;
+  try {
+    event = JSON.parse(raw);
+  } catch {
+    res.writeHead(400, {"Content-Type": "text/plain"});
+    res.end("Bad Request");
+    return;
+  }
+
+  const normalized = normalizeTelemetryEvent(event);
+  if (!normalized || !normalized.type) {
+    res.writeHead(422, {"Content-Type": "text/plain"});
+    res.end("Unprocessable Entity");
+    return;
+  }
+
+  recordTelemetryEvent(event);
+
+  res.writeHead(202, {"Content-Type": "application/json"});
+  res.end(JSON.stringify({ok: true}));
+}
+
+const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   let pathname = url.pathname;
 
@@ -44,6 +157,11 @@ const server = http.createServer((req, res) => {
       "Cache-Control": "no-cache",
     });
     res.end(envConfigJS());
+    return;
+  }
+
+  if (pathname === "/__telemetry") {
+    await handleTelemetry(req, res);
     return;
   }
 
@@ -86,3 +204,10 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`Listening on http://0.0.0.0:${PORT}`);
 });
+
+function shutdown() {
+  void shutdownTelemetry().finally(() => server.close());
+}
+
+process.once("SIGTERM", shutdown);
+process.once("SIGINT", shutdown);

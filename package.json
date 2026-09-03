@@ -35,6 +35,12 @@
   },
   "dependencies": {
     "@azure/msal-browser": "^5.20.0",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.222.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-metrics": "^2.11.0",
+    "@opentelemetry/sdk-node": "^0.222.0",
+    "@opentelemetry/semantic-conventions": "^1.43.0",
     "dompurify": "^3.4.12",
     "marked": "^17.0.4"
   },

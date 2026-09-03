@@ -10,6 +10,12 @@ import {
   signOut,
 } from "../auth.js";
 import {getManifestVersion} from "./manifestVersion.js";
+import {
+  recordAdoption,
+  recordActionStarted,
+  recordActionFinished,
+  recordError,
+} from "../telemetry.js";
 
 const ENV = (typeof window !== "undefined" && window.__ENV) || {};
 const ENV_API_URL = ENV.LIBRECHAT_API_URL || "";
@@ -683,17 +689,29 @@ async function summarizeEmail() {
   if (!settings) return;
 
   showLoading();
+  recordActionStarted("summarize");
+  const startedAt = Date.now();
+  const phaseDurations = {};
+  const readingStartedAt = Date.now();
 
   try {
     const email = await getEmailData();
+    phaseDurations.reading_email = Date.now() - readingStartedAt;
     showEmailPreview(email);
 
     const emailText = formatEmailForPrompt(email);
     const response = await callLibreChat(settings, emailText, "summarize");
+    phaseDurations.thinking =
+      Date.now() - readingStartedAt - phaseDurations.reading_email;
 
     showResponse(response);
+    recordActionFinished("summarize", "completed", {
+      durationMs: Date.now() - startedAt,
+      phaseDurations,
+    });
   } catch (err) {
     hideLoading();
+    recordError("summarize", err, Date.now() - startedAt, phaseDurations);
     showError(err.message || t("error.unexpected"));
   }
 }
@@ -706,22 +724,39 @@ async function replyWithAI() {
   if (!settings) return;
 
   showLoading();
+  recordActionStarted("reply");
+  const startedAt = Date.now();
+  const phaseDurations = {};
+  const readingStartedAt = Date.now();
 
   try {
     const email = await getEmailData();
+    phaseDurations.reading_email = Date.now() - readingStartedAt;
     showEmailPreview(email);
 
     const emailText = formatEmailForPrompt(email);
     const response = await callLibreChat(settings, emailText, "reply");
+    phaseDurations.thinking =
+      Date.now() - readingStartedAt - phaseDurations.reading_email;
 
     showResponse(response);
 
     if (isPhishingResponse(response)) {
       showError(t("error.phishingBlocked"));
+      recordActionFinished("reply", "cancelled", {
+        durationMs: Date.now() - startedAt,
+        phaseDurations,
+        errorKind: "invalid_response",
+      });
       return;
     }
     if (isNoReplyNeeded(response)) {
       showError(t("error.noReplyNeeded"));
+      recordActionFinished("reply", "cancelled", {
+        durationMs: Date.now() - startedAt,
+        phaseDurations,
+        errorKind: "invalid_response",
+      });
       return;
     }
 
@@ -734,8 +769,14 @@ async function replyWithAI() {
     item.displayReplyAllForm({
       htmlBody: htmlBody,
     });
+
+    recordActionFinished("reply", "completed", {
+      durationMs: Date.now() - startedAt,
+      phaseDurations,
+    });
   } catch (err) {
     hideLoading();
+    recordError("reply", err, Date.now() - startedAt, phaseDurations);
     showError(err.message || t("error.unexpected"));
   }
 }
@@ -963,13 +1004,23 @@ async function runToneRewrite(tone) {
   });
 
   showLoading();
+  recordActionStarted("tone");
+  const startedAt = Date.now();
+  const phaseDurations = {};
+  const readingStartedAt = Date.now();
 
   try {
     // Re-read the selection each time so the user can change the selected text
     // between attempts (or switch tones) without reopening the task pane.
     const selection = (await getSelectedText()).trim();
+    phaseDurations.reading_email = Date.now() - readingStartedAt;
     if (!selection) {
       hideLoading();
+      recordActionFinished("tone", "cancelled", {
+        durationMs: Date.now() - startedAt,
+        phaseDurations,
+        errorKind: "invalid_response",
+      });
       showError(t("tone.noSelection"));
       return;
     }
@@ -981,12 +1032,19 @@ async function runToneRewrite(tone) {
       "tone",
       directive,
     );
+    phaseDurations.thinking =
+      Date.now() - readingStartedAt - phaseDurations.reading_email;
     toneState.rewritten = (rewritten || "").trim();
 
     showResponse(toneState.rewritten);
     document.getElementById("tone-actions").classList.remove("hidden");
+    recordActionFinished("tone", "completed", {
+      durationMs: Date.now() - startedAt,
+      phaseDurations,
+    });
   } catch (err) {
     hideLoading();
+    recordError("tone", err, Date.now() - startedAt, phaseDurations);
     showError(err.message || t("error.unexpected"));
   }
 }
@@ -1076,6 +1134,8 @@ Office.onReady(async (info) => {
     // before anything else runs. This is the only place consent can be granted.
     const signedIn = await ensureSignedIn();
     if (!signedIn) return;
+
+    recordAdoption();
 
     // Agents load once, right after sign-in — the dropdown is the only setting.
     loadAgents();
