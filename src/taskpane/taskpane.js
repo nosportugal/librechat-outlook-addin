@@ -1,14 +1,24 @@
-/* global Office */
+/* global Office, __ADDIN_VERSION__ */
 import {marked} from "marked";
 import DOMPurify from "dompurify";
 import {initI18n, t} from "../i18n.js";
-import {isNaaSupported, getAccessToken, getSignedInUser} from "../auth.js";
+import {
+  isNaaSupported,
+  getAccessToken,
+  getSignedInUser,
+  signIn,
+  signOut,
+} from "../auth.js";
+import {getManifestVersion} from "./manifestVersion.js";
 
 const ENV = (typeof window !== "undefined" && window.__ENV) || {};
 const ENV_API_URL = ENV.LIBRECHAT_API_URL || "";
 const ENV_AGENT_ID = ENV.LIBRECHAT_AGENT_ID || "";
 const ENV_APP_NAME = ENV.APP_NAME || "AI Assistant";
 const ENV_APP_LOGO_URL = ENV.APP_LOGO_URL || "";
+const ADDIN_VERSION =
+  typeof __ADDIN_VERSION__ === "string" ? __ADDIN_VERSION__ : "dev";
+const MANIFEST_VERSION = getManifestVersion();
 
 // The LibreChat agent owns its persona and instructions server-side
 // (identity, security analysis, summary + suggested-reply contract).
@@ -556,6 +566,11 @@ function setAccountStatus(text) {
   if (el) el.textContent = text;
 }
 
+function setText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
 // Signs the user in interactively (the ONLY place consent can be granted) and
 // returns the token. Throws typed errors that the caller maps to a screen.
 async function signInInteractively() {
@@ -596,9 +611,41 @@ function showAuthSignIn(err) {
 async function refreshAccountCard() {
   try {
     const user = await getSignedInUser();
-    setAccountStatus(user ? t("auth.signedInAs", user) : t("auth.signingIn"));
+    setText("account-email", user || t("auth.signingIn"));
+    setAccountStatus(user ? t("settings.connected") : t("auth.signingIn"));
+    setText("deployment-version", ADDIN_VERSION);
+    setText("manifest-version", MANIFEST_VERSION);
+    setText("instance-host", getInstanceHost());
   } catch {
     setAccountStatus(t("auth.signingIn"));
+  }
+}
+
+function getInstanceHost() {
+  try {
+    return (
+      new URL(ENV_API_URL).host || ENV_API_URL || t("settings.notConfigured")
+    );
+  } catch {
+    return ENV_API_URL || t("settings.notConfigured");
+  }
+}
+
+async function handleSignOut() {
+  const button = document.getElementById("sign-out-btn");
+  const errorBox = document.getElementById("settings-error-box");
+  const errorMessage = document.getElementById("settings-error-message");
+  if (button) button.disabled = true;
+  if (errorBox) errorBox.classList.add("hidden");
+  try {
+    await signOut();
+    showView("auth-signin");
+  } catch (err) {
+    if (errorMessage) {
+      errorMessage.textContent = err.message || t("error.signOutFailed");
+    }
+    if (errorBox) errorBox.classList.remove("hidden");
+    if (button) button.disabled = false;
   }
 }
 
@@ -607,7 +654,7 @@ async function retrySignIn() {
   const btn = document.getElementById("auth-signin-btn");
   if (btn) btn.disabled = true;
   try {
-    await signInInteractively();
+    await signIn();
     await purgeLegacyApiKey();
     await refreshAccountCard();
     // Signed in — reload so the pending action runs cleanly.
@@ -1042,6 +1089,12 @@ Office.onReady(async (info) => {
     document.getElementById("back-btn").addEventListener("click", () => {
       showView("main");
     });
+    document
+      .getElementById("sign-out-btn")
+      .addEventListener("click", handleSignOut);
+    document
+      .getElementById("refresh-agents-btn")
+      .addEventListener("click", loadAgents);
 
     // Wire up agent selection persistence
     document.getElementById("agent-select").addEventListener("change", () => {
