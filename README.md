@@ -119,16 +119,20 @@ Once Entra and LibreChat are configured, no API key is required and there is not
 
 Copy `.env.example` to `.env` and fill in the values. All variables are optional during development, but the LibreChat URL and Entra settings are required for a working deployment.
 
-| Variable             | Description                                                                                   | Default               |
-| -------------------- | --------------------------------------------------------------------------------------------- | --------------------- |
-| `LIBRECHAT_API_URL`  | Base URL of your LibreChat instance (no trailing slash)                                       | _(none)_              |
-| `LIBRECHAT_AGENT_ID` | Default Agent / Assistant ID to pre-select                                                    | _(none)_              |
-| `ENTRA_CLIENT_ID`    | Application (client) ID of the add-in's Entra SPA registration                                | _(none)_              |
-| `ENTRA_TENANT_ID`    | Directory (tenant) ID used for the single-tenant Entra authority                              | _(none)_              |
-| `ENTRA_API_SCOPE`    | Full delegated scope exposed by LibreChat, for example `api://<api-client-id>/access_as_user` | _(none)_              |
-| `APP_NAME`           | Product name shown in the task pane header, title, and notification strings                   | `AI Assistant`        |
-| `APP_LOGO_URL`       | Absolute URL to your logo for the task pane header                                            | bundled `icon-32.png` |
-| `ICON_LABEL`         | Badge drawn on the main ribbon icon at runtime (`DEV`, `STB`, or empty)                       | _(none — production)_ |
+| Variable                      | Description                                                                                   | Default               |
+| ----------------------------- | --------------------------------------------------------------------------------------------- | --------------------- |
+| `LIBRECHAT_API_URL`           | Base URL of your LibreChat instance (no trailing slash)                                       | _(none)_              |
+| `LIBRECHAT_AGENT_ID`          | Default Agent / Assistant ID to pre-select                                                    | _(none)_              |
+| `ENTRA_CLIENT_ID`             | Application (client) ID of the add-in's Entra SPA registration                                | _(none)_              |
+| `ENTRA_TENANT_ID`             | Directory (tenant) ID used for the single-tenant Entra authority                              | _(none)_              |
+| `ENTRA_API_SCOPE`             | Full delegated scope exposed by LibreChat, for example `api://<api-client-id>/access_as_user` | _(none)_              |
+| `APP_NAME`                    | Product name shown in the task pane header, title, and notification strings                   | `AI Assistant`        |
+| `APP_LOGO_URL`                | Absolute URL to your logo for the task pane header                                            | bundled `icon-32.png` |
+| `ICON_LABEL`                  | Badge drawn on the main ribbon icon at runtime (`DEV`, `STB`, `LOC`, or empty)                | _(none — production)_ |
+| `PORT`                        | HTTP port used by the runtime server                                                          | `3000`                |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Base URL of the OpenTelemetry Collector; metrics go to `/v1/metrics`                          | _(disabled)_          |
+
+`OTEL_EXPORTER_OTLP_ENDPOINT` is a server-only setting. It is not exposed to the browser. Leave it empty to disable telemetry safely.
 
 > **Note:** `APP_NAME` controls all visible product-name references in the task pane UI at runtime. It does **not** update `manifest.xml` — that file is read by Outlook at install time and must be edited separately (see below).
 
