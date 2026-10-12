@@ -148,6 +148,8 @@ async function handleTelemetry(req, res) {
 }
 
 const server = http.createServer(async (req, res) => {
+  res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet");
+  
   const url = new URL(req.url, `http://${req.headers.host}`);
   let pathname = url.pathname;
 
