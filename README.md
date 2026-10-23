@@ -8,7 +8,7 @@ Summarize threads, draft replies, and extract action items — all from your inb
 powered by your own [LibreChat](https://www.librechat.ai/) instance.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D24-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D26-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![Outlook Add-in](https://img.shields.io/badge/Outlook-Add--in-0078D4?logo=microsoftoutlook&logoColor=white)](https://learn.microsoft.com/en-us/office/dev/add-ins/outlook/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](Dockerfile)
 
@@ -38,7 +38,7 @@ powered by your own [LibreChat](https://www.librechat.ai/) instance.
 
 ## 📋 Prerequisites
 
-- **[Node.js](https://nodejs.org/)** v24 or later
+- **[Node.js](https://nodejs.org/)** v26 or later
 - An **Outlook** client (Desktop, Web, or Mac) with add-in support
 - A running **[LibreChat](https://www.librechat.ai/)** instance with an OpenAI-compatible API endpoint
 - An Outlook client that supports **Nested App Authentication (NAA) 1.1** — Outlook on the web, Outlook for Windows version 2409 (build 18025.20000) or later, Outlook for Mac version 16.89 (build 24090815) or later, or the supported mobile clients
